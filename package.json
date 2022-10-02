@@ -9,9 +9,14 @@
     "test:coverage": "nyc --reporter=lcov --reporter=text-summary mocha test.js --exit",
     "lint": "prettier --write {index,test}.js"
   },
-  "keywords": [],
-  "author": "Vincent A. Saulys",
-  "license": "ISC",
+  "repository": "valexandersaulys/tiny-csrf",
+  "keywords": [
+    "express",
+    "csrf",
+    "tokens"
+  ],
+  "author": "Vincent A. Saulys (vincent@saulys.me)",
+  "license": "MIT",
   "devDependencies": {
     "chai": "^4.3.6",
     "mocha": "^10.0.0",
