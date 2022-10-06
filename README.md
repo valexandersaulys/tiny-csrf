@@ -88,4 +88,4 @@ app.post("/", (req, res) => {
 
 ## License
 
-[MIT](#)
+[MIT](https://mit-license.org/)
