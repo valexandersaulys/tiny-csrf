@@ -1,9 +1,19 @@
 const { randomUUID } = require("crypto");
+const { encryptCookie, verifyCsrf } = require("./encryption");
 
-const csurf = (forbiddenMethods, excludedUrls) => {
-  if (!forbiddenMethods) forbiddenMethods = ["POST"];
+const cookieParams = {
+  httpOnly: true,
+  sameSite: "strict",
+  signed: true,
+  maxAge: 300000
+};
+
+const csurf = (secret, forbiddenMethods, excludedUrls) => {
+  if (!forbiddenMethods) forbiddenMethods = ["POST", "PUT", "PATCH"];
+  if (secret.length != 32)
+    throw new Error("Your secret is not the required 32 characters long");
   return (req, res, next) => {
-    if (!req.cookies || !res.cookie)
+    if (!req.cookies || !res.cookie || !req.signedCookies)
       throw new Error("No Cookie middleware is installed");
     if (
       // if any excludedUrl matches as either string or regexp
@@ -12,42 +22,33 @@ const csurf = (forbiddenMethods, excludedUrls) => {
       ).length > 0
     ) {
       req.csrfToken = () => {
-        if (!req.cookies.csrfToken) {
-          const csrfToken = randomUUID();
-          res.cookie("csrfToken", csrfToken);
-          return csrfToken;
-        }
-        return req.cookies.csrfToken;
+        const csrfToken = randomUUID();
+        res.cookie("csrfToken", encryptCookie(csrfToken, secret), cookieParams);
+        return csrfToken;
       };
       return next();
     } else if (forbiddenMethods.includes(req.method)) {
-      const { csrfToken } = req.cookies;
+      const { csrfToken } = req.signedCookies;
       if (
         csrfToken != undefined &&
-        (req.query._csrf === csrfToken ||
-          req.params._csrf === csrfToken ||
-          req.body._csrf === csrfToken)
+        verifyCsrf(req.body?._csrf, csrfToken, secret)
       ) {
-        res.cookie("csrfToken", "");
+        res.cookie("csrfToken", null, cookieParams);
         return next();
       } else {
         throw new Error(
-          `Did not get a CSRF token for ${req.method} ${req.originalUrl}: ${req.body._csrf} v. ${csrfToken}`
+          `Did not get a valid CSRF token for '${req.method} ${req.originalUrl}': ${req.body?._csrf} v. ${csrfToken}`
         );
       }
     } else {
       req.csrfToken = () => {
-        if (!req.cookies.csrfToken) {
-          const csrfToken = randomUUID();
-          res.cookie("csrfToken", csrfToken);
-          return csrfToken;
-        }
-        return req.cookies.csrfToken;
+        const csrfToken = randomUUID();
+        res.cookie("csrfToken", encryptCookie(csrfToken, secret), cookieParams);
+        return csrfToken;
       };
       return next();
     }
   };
 };
 
-// module.exports = csurf(forbiddenMethods, excludedUrls);
 module.exports = csurf;

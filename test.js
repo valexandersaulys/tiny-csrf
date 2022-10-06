@@ -3,13 +3,57 @@ const { describe, before, beforeEach, after, afterEach, it } = require("mocha");
 const sinon = require("sinon");
 const { mockRequest, mockResponse } = require("mock-req-res");
 
+const { randomUUID, randomBytes } = require("crypto");
 const csurf = require("./index");
+const { encryptCookie, decryptCookie, verifyCsrf } = require("./encryption");
+
+describe("Cookie Encryption Tests", () => {
+  before(() => {});
+  after(() => {});
+
+  it("will encrypt and decrypt a cookie", () => {
+    // req.cookies.csrfToken =>  will be scrambled
+    const secret = "123456789iamasecret987654321look";
+    const csrfToken = randomUUID();
+    const encryptedCsrfToken = encryptCookie(csrfToken, secret);
+    assert.notEqual(
+      csrfToken,
+      encryptedCsrfToken,
+      "Both are equal as plain string and shouldn't be"
+    );
+    assert.isTrue(verifyCsrf(csrfToken, encryptedCsrfToken, secret));
+    assert.isFalse(
+      verifyCsrf(
+        csrfToken,
+        encryptedCsrfToken,
+        randomBytes(16).toString("hex")
+      ),
+      "Should not be able to verify without the secret"
+    );
+    assert.isFalse(
+      verifyCsrf(randomUUID(), encryptedCsrfToken, secret),
+      "Should not verify random UUID tokens"
+    );
+    assert.isFalse(
+      verifyCsrf("", encryptedCsrfToken, secret),
+      "Should not verify random blank tokens"
+    );
+    assert.isFalse(
+      verifyCsrf(null, encryptedCsrfToken, secret),
+      "Should not verify random null tokens"
+    );
+  });
+});
 
 describe("Default Options Tests", () => {
   before(() => {
-    this.csrf = csurf(null, []);
+    this.secret = "123456789iamasecret987654321look";
+    this.csrf = csurf(this.secret);
   });
 
+  it("throw internal error if our secret is not long enough", () => {
+    assert.throws(() => csurf("imnotlongenough"));
+  });
   it("throws internal error if we have no cookies", () => {
     const req = mockRequest({
       cookies: null
@@ -28,7 +72,7 @@ describe("Default Options Tests", () => {
   it("generates token for non-POST request", () => {
     const req = mockRequest({
       method: "GET",
-      cookies: {},
+      signedCookies: {},
       body: {}
     });
     const res = mockResponse({
@@ -46,8 +90,8 @@ describe("Default Options Tests", () => {
   it("allows if the CSRF token is correct", () => {
     const req = mockRequest({
       method: "POST",
-      cookies: {
-        csrfToken: "aaaa"
+      signedCookies: {
+        csrfToken: encryptCookie("aaaa", this.secret)
       },
       body: {
         _csrf: "aaaa"
@@ -64,8 +108,8 @@ describe("Default Options Tests", () => {
   it("does not allow if the CSRF token is incorrect", () => {
     const req = mockRequest({
       method: "POST",
-      cookies: {
-        csrfToken: "aaaabbb"
+      signedCookies: {
+        csrfToken: encryptCookie("aaaabbb", this.secret)
       },
       body: {
         _csrf: "aaaa"
@@ -80,15 +124,15 @@ describe("Default Options Tests", () => {
       this.csrf(req, res, next);
     } catch (err) {
       assert.equal(err.name, "Error");
-      assert.include(err.message, "Did not get a CSRF token");
+      assert.include(err.message, "Did not get a valid CSRF token");
     }
     assert.isFalse(next.calledOnce);
   });
   it("does not allow if the CSRF token is missing in body", () => {
     const req = mockRequest({
       method: "POST",
-      cookies: {
-        csrfToken: "aaaabbb"
+      signedCookies: {
+        csrfToken: encryptCookie("aaaabbb", this.secret)
       },
       body: {}
     });
@@ -101,14 +145,14 @@ describe("Default Options Tests", () => {
       this.csrf(req, res, next);
     } catch (err) {
       assert.equal(err.name, "Error");
-      assert.include(err.message, "Did not get a CSRF token");
+      assert.include(err.message, "Did not get a valid CSRF token");
     }
     assert.isFalse(next.calledOnce);
   });
   it("does not allow if the CSRF token was never generated", () => {
     const req = mockRequest({
       method: "POST",
-      cookies: {},
+      signedCookies: {},
       body: {}
     });
     const res = mockResponse({
@@ -120,44 +164,23 @@ describe("Default Options Tests", () => {
       this.csrf(req, res, next);
     } catch (err) {
       assert.equal(err.name, "Error");
-      assert.include(err.message, "Did not get a CSRF token");
+      assert.include(err.message, "Did not get a valid CSRF token");
     }
     assert.isFalse(next.calledOnce);
-  });
-  it("will reuse if the CSRF token already exists in a non-POST", () => {
-    const req = mockRequest({
-      method: "GET",
-      cookies: {
-        csrfToken: "aaaabc"
-      },
-      body: {}
-    });
-    const res = mockResponse({
-      cookie: sinon.stub()
-    });
-    const next = sinon.stub();
-    assert.isNotFunction(req.csrfToken);
-    this.csrf(req, res, next);
-    assert.isTrue(next.calledOnce);
-    assert.isFunction(
-      req.csrfToken,
-      "Did not attach a csrfToken function to req"
-    );
-    const sampleToken = req.csrfToken();
-    assert.equal(sampleToken, "aaaabc");
   });
 });
 
 describe("Tests w/Specified Included Request Methods", () => {
   before(() => {
-    this.csrf = csurf(["POST", "PUT"], []);
+    this.secret = "123456789iamasecret987654321look";
+    this.csrf = csurf(this.secret, ["POST", "PUT"], []);
   });
 
   it("allows if the CSRF token is correct", () => {
     const req = mockRequest({
       method: "PUT",
-      cookies: {
-        csrfToken: "aaaa"
+      signedCookies: {
+        csrfToken: encryptCookie("aaaa", this.secret)
       },
       body: {
         _csrf: "aaaa"
@@ -174,8 +197,8 @@ describe("Tests w/Specified Included Request Methods", () => {
   it("does not allow if the CSRF token is incorrect", () => {
     const req = mockRequest({
       method: "PUT",
-      cookies: {
-        csrfToken: "aaaabbb"
+      signedCookies: {
+        csrfToken: encryptCookie("aaaabbb", this.secret)
       },
       body: {
         _csrf: "aaaa"
@@ -190,15 +213,15 @@ describe("Tests w/Specified Included Request Methods", () => {
       this.csrf(req, res, next);
     } catch (err) {
       assert.equal(err.name, "Error");
-      assert.include(err.message, "Did not get a CSRF token");
+      assert.include(err.message, "Did not get a valid CSRF token");
     }
     assert.isFalse(next.calledOnce);
   });
   it("allows if the method is specified as not included", () => {
     const req = mockRequest({
       method: "GET",
-      cookies: {
-        csrfToken: "aaaa"
+      signedCookies: {
+        csrfToken: encryptCookie("aaaa", this.secret)
       },
       body: {
         _csrf: ""
@@ -216,14 +239,15 @@ describe("Tests w/Specified Included Request Methods", () => {
 
 describe("Tests w/Specified Excluded URLs", () => {
   before(() => {
-    this.csrf = csurf(null, ["/detail", /\/detail\.*/i]);
+    this.secret = "123456789iamasecret987654321look";
+    this.csrf = csurf(this.secret, null, ["/detail", /\/detail\.*/i]);
   });
 
   it("allows if the URL is marked as excluded", () => {
     const req = mockRequest({
       method: "POST",
-      cookies: {
-        csrfToken: "aaaaa"
+      signedCookies: {
+        csrfToken: encryptCookie("aaaaa", this.secret)
       },
       body: {
         _csrf: ""
@@ -241,14 +265,12 @@ describe("Tests w/Specified Excluded URLs", () => {
       req.csrfToken,
       "Did not add the csrfToken to this request"
     );
-    const sampleToken = req.csrfToken();
-    assert.equal(sampleToken, "aaaaa", "Not reusing csrf tokens");
   });
   it("allows if the URL is marked as excluded as a regexp", () => {
     const req = mockRequest({
       method: "POST",
-      cookies: {
-        csrfToken: "aaaaa"
+      signedCookies: {
+        csrfToken: encryptCookie("aaaaa", this.secret)
       },
       body: {
         _csrf: ""
@@ -266,13 +288,11 @@ describe("Tests w/Specified Excluded URLs", () => {
       req.csrfToken,
       "Did not add the csrfToken to this request"
     );
-    const sampleToken = req.csrfToken();
-    assert.equal(sampleToken, "aaaaa", "Not reusing csrf tokens");
   });
   it("generates a new token if no token is supplied", () => {
     const req = mockRequest({
       method: "POST",
-      cookies: {},
+      signedCookies: {},
       body: {
         _csrf: ""
       },
@@ -295,7 +315,7 @@ describe("Tests w/Specified Excluded URLs", () => {
   it("does not allow if the CSRF token is incorrect and the URL is not marked as excluded", () => {
     const req = mockRequest({
       method: "POST",
-      cookies: {
+      signedCookies: {
         csrfToken: "aaaabbb"
       },
       body: {
@@ -312,7 +332,7 @@ describe("Tests w/Specified Excluded URLs", () => {
       this.csrf(req, res, next);
     } catch (err) {
       assert.equal(err.name, "Error");
-      assert.include(err.message, "Did not get a CSRF token");
+      assert.include(err.message, "Did not get a valid CSRF token");
     }
     assert.isFalse(next.calledOnce);
   });
