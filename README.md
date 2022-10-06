@@ -29,18 +29,13 @@ const session = require("express-session");
 
 let app = express();
 
-app.use(
-  session({})
-);
-app.use(
-  csurf(
-    "123456789iamasecret987654321look",  // secret -- must be 32 bits or chars in length
-    ["POST"],    // the request methods we want CSRF protection for
-    ["/detail", /\/detail\.*/i]  // any URLs we want to exclude, either as strings or regexp
-  )
-);
+app.use(express.urlencoded({ extended: false })); 
+app.use(cookieParser("cookie-parser-secret"));
+app.use(session({ secret: "keyboard cat" }));
+// order matters: above three must come first
+app.use(csurf("123456789iamasecret987654321look"));
 
-// declare all your other routes and middleware
+// ...declare all your other routes and middleware
 ```
 
 The secret must be 32 bits (e.g. characters) in length and uses 
@@ -60,29 +55,54 @@ request via `_csrf`.
 ```javascript
 const csurf = require("tiny-csrf");
 const express = require("express");
+const session = require("express-session");
+const cookieParser = require("cookie-parser");
 
 let app = express();
 
-app.use(csurf());
+app.use(express.urlencoded({ extended: false })); 
+app.use(cookieParser("cookie-parser-secret"));
+app.use(session({ secret: "keyboard cat" }));
+// order matters: above three must come first
+app.use(
+  csurf(
+    "123456789iamasecret987654321look", // secret -- must be 32 bits or chars in length
+    ["POST"], // the request methods we want CSRF protection for
+    ["/detail", /\/detail\.*/i] // any URLs we want to exclude, either as strings or regexp
+  )
+);
 
 app.get("/", (req, res) => {
-  const csrfToken = req.csrfToken(); 
-  return res.render("my-template.njk", { csrfToken });
+  const csrfToken = req.csrfToken();
+  return res.status(200).send(
+    `
+<form method="POST" action="/">
+  <input name="_csrf" value="${csrfToken}" type="hidden"/>
+  <input name="thing" type="text"/>
+  <button type="submit"/>Submit</button>
+</form>
+`.trim()
+  );
 });
 
-/* 
- * then embed the token in a hidden section of a form, e.g.
- * 
- * <form method="POST">
- *   <input name="_csrf" type="hidden" value="{{ csrfToken }}"/>
- *   <button type="submit">Submit</button>
- * </form>
- */
+const { randomUUID } = require("crypto");
+app.get("/wont-pass", (req, res) => {
+  const uuid = randomUUID();
+  return res.status(200).send(
+    `
+<form method="POST" action="/">
+  <input name="_csrf" value="${uuid}" type="hidden"/>
+  <button type="submit"/>Submit</button>
+</form>
+`.trim()
+  );
+});
 
 app.post("/", (req, res) => {
-  // all invalid or nonexistent CSRF tokens will return 403
-  return res.status(200).send("Got it!");
+  res.status(200).send("Your cookie passed!");
 });
+
+app.listen(3000, () => console.log("running"));
 ```
 
 
