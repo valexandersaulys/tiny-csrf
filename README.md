@@ -4,13 +4,19 @@ This is a tiny csrf library meant to replace what `csurf` used to do
 [before it was deleted](https://github.com/expressjs/csurf). It is
 _almost_ a drop-in replacement.  
 
-Note that if you require very specific security needs you may want to
-look elsewhere. This library supports encrypting cookies on the client
-side to prevent malicious attackers from looking in. It does not
-protect against things such as [double submit
-cookies](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#double-submit-cookie). Those
-setups require greater setup and more know-how. This library aims to
-be simple to setup. 
+**Notice** that if you require very specific security needs you may
+want to look elsewhere. This library supports encrypting cookies on
+the client side to prevent malicious attackers from looking in but
+this may not be sufficient in some cases. For instance, It
+does not protect against things such as [double submit 
+cookies](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#double-submit-cookie). Those 
+setups require more know-how and involvement. This library aims to
+be simple to setup. If you have very strong security needs (e.g. large
+scale production application, sensitive information, single page
+application that makes many backend requests), then consult [the OWASP
+Security Link
+here](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)
+and implement more stringent security. 
 
 
 
