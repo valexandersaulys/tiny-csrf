@@ -74,7 +74,8 @@ app.use(
   csurf(
     "123456789iamasecret987654321look", // secret -- must be 32 bits or chars in length
     ["POST"], // the request methods we want CSRF protection for
-    ["/detail", /\/detail\.*/i] // any URLs we want to exclude, either as strings or regexp
+    ["/detail", /\/detail\.*/i], // any URLs we want to exclude, either as strings or regexp
+    [process.env.SITE_URL + "/service-worker.js"]  // any requests from here will not see the token and will not generate a new one
   )
 );
 
