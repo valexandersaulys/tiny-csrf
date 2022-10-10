@@ -8,10 +8,15 @@ const cookieParams = {
   maxAge: 300000
 };
 
-const csurf = (secret, forbiddenMethods, excludedUrls) => {
-  if (!forbiddenMethods) forbiddenMethods = ["POST", "PUT", "PATCH"];
+const csurf = (secret, forbiddenMethods, excludedUrls, excludedReferers) => {
   if (secret.length != 32)
     throw new Error("Your secret is not the required 32 characters long");
+  if (!forbiddenMethods) forbiddenMethods = ["POST", "PUT", "PATCH"];
+  if (!excludedReferers) excludedReferers = [];
+  else if (!Array.isArray(excludedReferers))
+    throw new Error(
+      `Invalid argument passed for excludedReferers (fourth arg): ${excludedReferers}`
+    );
   return (req, res, next) => {
     if (!req.cookies || !res.cookie || !req.signedCookies)
       throw new Error("No Cookie middleware is installed");
@@ -22,9 +27,16 @@ const csurf = (secret, forbiddenMethods, excludedUrls) => {
       ).length > 0
     ) {
       req.csrfToken = () => {
-        const csrfToken = randomUUID();
-        res.cookie("csrfToken", encryptCookie(csrfToken, secret), cookieParams);
-        return csrfToken;
+        if (excludedReferers.includes(req.headers.referer)) return null;
+        else {
+          const csrfToken = randomUUID();
+          res.cookie(
+            "csrfToken",
+            encryptCookie(csrfToken, secret),
+            cookieParams
+          );
+          return csrfToken;
+        }
       };
       return next();
     } else if (forbiddenMethods.includes(req.method)) {
@@ -42,6 +54,7 @@ const csurf = (secret, forbiddenMethods, excludedUrls) => {
       }
     } else {
       req.csrfToken = () => {
+        if (excludedReferers.includes(req.headers.referer)) return null;
         const csrfToken = randomUUID();
         res.cookie("csrfToken", encryptCookie(csrfToken, secret), cookieParams);
         return csrfToken;
