@@ -116,3 +116,8 @@ app.listen(3000, () => console.log("running"));
 ## License
 
 [MIT](https://mit-license.org/)
+
+
+## Sponsors
+
+![/img/jelotti-logo.svg](https://jelotti.com/)
