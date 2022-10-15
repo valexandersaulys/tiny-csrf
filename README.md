@@ -120,4 +120,4 @@ app.listen(3000, () => console.log("running"));
 
 ## Sponsors
 
-![/img/jelotti-logo.svg](https://jelotti.com/)
+[![Jelotti](img/jelotti-logo.svg "Jelotti Logo")](http://jelotti.com)
