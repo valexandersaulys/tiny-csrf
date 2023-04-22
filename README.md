@@ -118,6 +118,3 @@ app.listen(3000, () => console.log("running"));
 [MIT](https://mit-license.org/)
 
 
-## Special Thanks
-
-[![Jelotti](/img/jelotti-logo.png "Jelotti Logo")](http://jelotti.com)
