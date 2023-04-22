@@ -101,13 +101,19 @@ describe("Default Options Tests", () => {
       cookie: sinon.stub()
     });
     const next = sinon.stub();
-    assert.isNotFunction(req.csrfToken);
+    assert.isNotFunction(
+      req.csrfToken,
+      "Generating a csrfToken function before its passed through middleware?"
+    );
+    assert.equal("aaaa", req.body._csrf);
     this.csrfMiddlware(req, res, next);
     assert.isTrue(next.calledOnce);
     assert.isFunction(
       req.csrfToken,
       "req.csrfToken is not being instantiated on POST requests"
     );
+    const myNewToken = req.csrfToken();
+    assert.notEqual(myNewToken, "aaaa", "Not creating a new CSRF token");
   });
   it("does not allow if the CSRF token is incorrect", () => {
     const req = mockRequest({
