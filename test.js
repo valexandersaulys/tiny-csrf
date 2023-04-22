@@ -104,7 +104,10 @@ describe("Default Options Tests", () => {
     assert.isNotFunction(req.csrfToken);
     this.csrfMiddlware(req, res, next);
     assert.isTrue(next.calledOnce);
-    assert.isFunction(req.csrfToken);
+    assert.isFunction(
+      req.csrfToken,
+      "req.csrfToken is not being instantiated on POST requests"
+    );
   });
   it("does not allow if the CSRF token is incorrect", () => {
     const req = mockRequest({
