@@ -1,5 +1,7 @@
 # `tiny-csrf` 
 
+[![Downloads](https://badgen.net/npm/dt/tiny-csrf)](https://www.npmjs.com/package/tiny-csrf)
+
 This is a tiny csrf library meant to replace what `csurf` used to do
 [before it was deleted](https://github.com/expressjs/csurf). It is
 _almost_ a drop-in replacement.  
@@ -110,6 +112,64 @@ app.post("/", (req, res) => {
 });
 
 app.listen(3000, () => console.log("running"));
+```
+
+## Code Coverage
+
+All contributions must contain [adequeate
+testing](https://github.com/valexandersaulys/tiny-csrf/blob/master/test.js). 
+```
+$ npm run test:coverage
+
+> tiny-csrf@1.1.3 test:coverage
+> nyc --reporter=lcov --reporter=text-summary mocha test.js --exit
+
+
+
+  Cookie Encryption Tests
+    ✔ will encrypt and decrypt a cookie
+
+  Default Options Tests
+    ✔ throw internal error if our secret is not long enough
+    ✔ throws internal error if we have no cookies
+    ✔ generates token for non-POST request
+    ✔ allows if the CSRF token is correct
+    ✔ does not allow if the CSRF token is incorrect
+    ✔ does not allow if the CSRF token is missing in body
+    ✔ does not allow if the CSRF token was never generated
+
+  Tests w/Specified Included Request Methods
+    ✔ allows if the CSRF token is correct
+    ✔ does not allow if the CSRF token is incorrect
+    ✔ allows if the method is specified as not included
+
+  Tests w/Specified Excluded URLs
+    ✔ allows if the URL is marked as excluded
+    ✔ allows if the URL is marked as excluded as a regexp
+    ✔ generates a new token if no token is supplied
+    ✔ does not allow if the CSRF token is incorrect and the URL is not marked as excluded
+
+  Excluded Referrer Tests (Service Workers)
+    ✔ throws error if instantiated without a list as the fourth argument
+    ✔ returns null if a service worker accesses an excluded URL
+    ✔ returns null if we are a service worker
+    ✔ allows for reuse of the CSRF token if there is a service worker request before the real one
+    ✔ allows for reuse of the CSRF token if there is a service worker request after the real one
+
+  other tests
+    ✔ works #1
+    ✔ works #2
+
+
+  22 passing (75ms)
+
+
+=============================== Coverage summary ===============================
+Statements   : 100% ( 59/59 )
+Branches     : 100% ( 30/30 )
+Functions    : 100% ( 8/8 )
+Lines        : 100% ( 54/54 )
+================================================================================
 ```
 
 
