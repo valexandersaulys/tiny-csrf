@@ -44,7 +44,7 @@ app.use(csurf("123456789iamasecret987654321look"));
 // ...declare all your other routes and middleware
 ```
 
-The secret must be 32 bits (e.g. characters) in length and uses 
+The secret must be 32 bytes (e.g. 32 characters, 256 bits) in length and uses 
 [the built-in `crypto.createCipheriv` library built into Node
 ](https://nodejs.org/api/crypto.html#cryptocreatecipherivalgorithm-key-iv-options). The
 secret length is enforced by the
