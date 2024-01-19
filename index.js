@@ -46,21 +46,19 @@ const csurf = (secret, forbiddenMethods, excludedUrls, excludedReferers) => {
         verifyCsrf(req.body?._csrf, csrfToken, secret)
       ) {
         res.cookie("csrfToken", null, cookieParams);
-        return next();
       } else {
         throw new Error(
           `Did not get a valid CSRF token for '${req.method} ${req.originalUrl}': ${req.body?._csrf} v. ${csrfToken}`
         );
       }
-    } else {
-      req.csrfToken = () => {
-        if (excludedReferers.includes(req.headers.referer)) return null;
-        const csrfToken = randomUUID();
-        res.cookie("csrfToken", encryptCookie(csrfToken, secret), cookieParams);
-        return csrfToken;
-      };
-      return next();
     }
+    req.csrfToken = () => {
+      if (excludedReferers.includes(req.headers.referer)) return null;
+      const csrfToken = randomUUID();
+      res.cookie("csrfToken", encryptCookie(csrfToken, secret), cookieParams);
+      return csrfToken;
+    };
+    return next();
   };
 };
 

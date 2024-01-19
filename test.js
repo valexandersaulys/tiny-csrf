@@ -48,7 +48,7 @@ describe("Cookie Encryption Tests", () => {
 describe("Default Options Tests", () => {
   before(() => {
     this.secret = "123456789iamasecret987654321look";
-    this.csrf = csurf(this.secret);
+    this.csrfMiddlware = csurf(this.secret);
   });
 
   it("throw internal error if our secret is not long enough", () => {
@@ -63,7 +63,7 @@ describe("Default Options Tests", () => {
     });
     const next = sinon.stub();
     try {
-      this.csrf(req, res, next);
+      this.csrfMiddlware(req, res, next);
     } catch (err) {
       assert.equal(err.name, "Error", err);
       assert.equal(err.message, "No Cookie middleware is installed");
@@ -80,7 +80,7 @@ describe("Default Options Tests", () => {
     });
     const next = sinon.stub();
     assert.isNotFunction(req.csrfToken);
-    this.csrf(req, res, next);
+    this.csrfMiddlware(req, res, next);
     assert.isFunction(req.csrfToken);
     req.csrfToken();
     assert.isTrue(res.cookie.calledOnce);
@@ -101,9 +101,19 @@ describe("Default Options Tests", () => {
       cookie: sinon.stub()
     });
     const next = sinon.stub();
-    assert.isNotFunction(req.csrfToken);
-    this.csrf(req, res, next);
+    assert.isNotFunction(
+      req.csrfToken,
+      "Generating a csrfToken function before its passed through middleware?"
+    );
+    assert.equal("aaaa", req.body._csrf);
+    this.csrfMiddlware(req, res, next);
     assert.isTrue(next.calledOnce);
+    assert.isFunction(
+      req.csrfToken,
+      "req.csrfToken is not being instantiated on POST requests"
+    );
+    const myNewToken = req.csrfToken();
+    assert.notEqual(myNewToken, "aaaa", "Not creating a new CSRF token");
   });
   it("does not allow if the CSRF token is incorrect", () => {
     const req = mockRequest({
@@ -121,7 +131,7 @@ describe("Default Options Tests", () => {
     const next = sinon.stub();
     assert.isNotFunction(req.csrfToken);
     try {
-      this.csrf(req, res, next);
+      this.csrfMiddlware(req, res, next);
     } catch (err) {
       assert.equal(err.name, "Error");
       assert.include(err.message, "Did not get a valid CSRF token");
@@ -142,7 +152,7 @@ describe("Default Options Tests", () => {
     const next = sinon.stub();
     assert.isNotFunction(req.csrfToken);
     try {
-      this.csrf(req, res, next);
+      this.csrfMiddlware(req, res, next);
     } catch (err) {
       assert.equal(err.name, "Error");
       assert.include(err.message, "Did not get a valid CSRF token");
@@ -161,7 +171,7 @@ describe("Default Options Tests", () => {
     const next = sinon.stub();
     assert.isNotFunction(req.csrfToken);
     try {
-      this.csrf(req, res, next);
+      this.csrfMiddlware(req, res, next);
     } catch (err) {
       assert.equal(err.name, "Error");
       assert.include(err.message, "Did not get a valid CSRF token");
@@ -173,7 +183,7 @@ describe("Default Options Tests", () => {
 describe("Tests w/Specified Included Request Methods", () => {
   before(() => {
     this.secret = "123456789iamasecret987654321look";
-    this.csrf = csurf(this.secret, ["POST", "PUT"], []);
+    this.csrfMiddlware = csurf(this.secret, ["POST", "PUT"], []);
   });
 
   it("allows if the CSRF token is correct", () => {
@@ -191,7 +201,7 @@ describe("Tests w/Specified Included Request Methods", () => {
     });
     const next = sinon.stub();
     assert.isNotFunction(req.csrfToken);
-    this.csrf(req, res, next);
+    this.csrfMiddlware(req, res, next);
     assert.isTrue(next.calledOnce);
   });
   it("does not allow if the CSRF token is incorrect", () => {
@@ -210,7 +220,7 @@ describe("Tests w/Specified Included Request Methods", () => {
     const next = sinon.stub();
     assert.isNotFunction(req.csrfToken);
     try {
-      this.csrf(req, res, next);
+      this.csrfMiddlware(req, res, next);
     } catch (err) {
       assert.equal(err.name, "Error");
       assert.include(err.message, "Did not get a valid CSRF token");
@@ -232,7 +242,7 @@ describe("Tests w/Specified Included Request Methods", () => {
     });
     const next = sinon.stub();
     assert.isNotFunction(req.csrfToken);
-    this.csrf(req, res, next);
+    this.csrfMiddlware(req, res, next);
     assert.isTrue(next.calledOnce);
   });
 });
@@ -240,7 +250,7 @@ describe("Tests w/Specified Included Request Methods", () => {
 describe("Tests w/Specified Excluded URLs", () => {
   before(() => {
     this.secret = "123456789iamasecret987654321look";
-    this.csrf = csurf(this.secret, null, ["/detail", /\/detail\.*/i]);
+    this.csrfMiddlware = csurf(this.secret, null, ["/detail", /\/detail\.*/i]);
   });
 
   it("allows if the URL is marked as excluded", () => {
@@ -259,7 +269,7 @@ describe("Tests w/Specified Excluded URLs", () => {
     });
     const next = sinon.stub();
     assert.isNotFunction(req.csrfToken);
-    this.csrf(req, res, next);
+    this.csrfMiddlware(req, res, next);
     assert.isTrue(next.calledOnce);
     assert.isFunction(
       req.csrfToken,
@@ -282,7 +292,7 @@ describe("Tests w/Specified Excluded URLs", () => {
     });
     const next = sinon.stub();
     assert.isNotFunction(req.csrfToken);
-    this.csrf(req, res, next);
+    this.csrfMiddlware(req, res, next);
     assert.isTrue(next.calledOnce);
     assert.isFunction(
       req.csrfToken,
@@ -303,7 +313,7 @@ describe("Tests w/Specified Excluded URLs", () => {
     });
     const next = sinon.stub();
     assert.isNotFunction(req.csrfToken);
-    this.csrf(req, res, next);
+    this.csrfMiddlware(req, res, next);
     assert.isTrue(next.calledOnce);
     assert.isFunction(
       req.csrfToken,
@@ -329,7 +339,7 @@ describe("Tests w/Specified Excluded URLs", () => {
     const next = sinon.stub();
     assert.isNotFunction(req.csrfToken);
     try {
-      this.csrf(req, res, next);
+      this.csrfMiddlware(req, res, next);
     } catch (err) {
       assert.equal(err.name, "Error");
       assert.include(err.message, "Did not get a valid CSRF token");
@@ -342,7 +352,7 @@ describe("Excluded Referrer Tests (Service Workers)", () => {
   before(() => {
     this.baseUrl = "http://localhost:3001";
     this.secret = "123456789iamasecret987654321look";
-    this.csrf = csurf(
+    this.csrfMiddlware = csurf(
       this.secret,
       null,
       ["/posts"],
@@ -376,7 +386,7 @@ describe("Excluded Referrer Tests (Service Workers)", () => {
     });
     const next = sinon.stub();
     assert.isNotFunction(req.csrfToken);
-    this.csrf(req, res, next);
+    this.csrfMiddlware(req, res, next);
     assert.isFunction(req.csrfToken);
     const csrfToken = req.csrfToken();
     assert.isNull(csrfToken);
@@ -396,7 +406,7 @@ describe("Excluded Referrer Tests (Service Workers)", () => {
     });
     const next = sinon.stub();
     assert.isNotFunction(req.csrfToken);
-    this.csrf(req, res, next);
+    this.csrfMiddlware(req, res, next);
     assert.isFunction(req.csrfToken);
     const csrfToken = req.csrfToken();
     assert.isNull(csrfToken);
@@ -416,7 +426,7 @@ describe("Excluded Referrer Tests (Service Workers)", () => {
     });
     const nextOne = sinon.stub();
     assert.isNotFunction(reqOne.csrfToken);
-    this.csrf(reqOne, resOne, nextOne);
+    this.csrfMiddlware(reqOne, resOne, nextOne);
     assert.isFunction(reqOne.csrfToken);
     const csrfTokenOne = reqOne.csrfToken();
     assert.isNotNull(csrfTokenOne);
@@ -434,7 +444,7 @@ describe("Excluded Referrer Tests (Service Workers)", () => {
     });
     const next = sinon.stub();
     assert.isNotFunction(req.csrfToken);
-    this.csrf(req, res, next);
+    this.csrfMiddlware(req, res, next);
     assert.isFunction(req.csrfToken);
     const csrfToken = req.csrfToken();
     assert.isNull(csrfToken);
@@ -457,7 +467,7 @@ describe("Excluded Referrer Tests (Service Workers)", () => {
     });
     const nextTwo = sinon.stub();
     assert.isNotFunction(reqTwo.csrfToken);
-    this.csrf(reqTwo, resTwo, nextTwo);
+    this.csrfMiddlware(reqTwo, resTwo, nextTwo);
     assert.isTrue(nextTwo.calledOnce);
   });
   it("allows for reuse of the CSRF token if there is a service worker request after the real one", () => {
@@ -474,7 +484,7 @@ describe("Excluded Referrer Tests (Service Workers)", () => {
     });
     const next = sinon.stub();
     assert.isNotFunction(req.csrfToken);
-    this.csrf(req, res, next);
+    this.csrfMiddlware(req, res, next);
     assert.isFunction(req.csrfToken);
     const csrfToken = req.csrfToken();
     assert.isNull(csrfToken);
@@ -493,7 +503,7 @@ describe("Excluded Referrer Tests (Service Workers)", () => {
     });
     const nextOne = sinon.stub();
     assert.isNotFunction(reqOne.csrfToken);
-    this.csrf(reqOne, resOne, nextOne);
+    this.csrfMiddlware(reqOne, resOne, nextOne);
     assert.isFunction(reqOne.csrfToken);
     const csrfTokenOne = reqOne.csrfToken();
     assert.isNotNull(csrfTokenOne);
@@ -515,7 +525,7 @@ describe("Excluded Referrer Tests (Service Workers)", () => {
     });
     const nextTwo = sinon.stub();
     assert.isNotFunction(reqTwo.csrfToken);
-    this.csrf(reqTwo, resTwo, nextTwo);
+    this.csrfMiddlware(reqTwo, resTwo, nextTwo);
     assert.isTrue(nextTwo.calledOnce);
   });
 });
